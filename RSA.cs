@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Numerics;
+using System.Security.Cryptography;
+using System.Diagnostics;
 
 namespace Header
 {
@@ -14,7 +16,7 @@ namespace Header
 
         public static Key publicKey;
         public static Key privateKey;
-        
+
         public static void KeyGenerator(int p, int q)
         {
             RSA.p = p;
@@ -22,7 +24,7 @@ namespace Header
 
             BigInteger euler = (p - 1) * (q - 1);
             BigInteger n = p * q;
-            BigInteger e = Create_E(euler,n);
+            BigInteger e = Create_E(n, euler);
             BigInteger d = ModInverse(e, euler);
             publicKey = new Key(e, n);
             privateKey = new Key(d, n);
@@ -77,12 +79,12 @@ namespace Header
             return true;
         }
 
-        
+
 
         public static BigInteger EuklidesNWD(BigInteger a, BigInteger b)
         {
             BigInteger tmp;
-            while(b != 0)
+            while (b != 0)
             {
                 tmp = b;
                 b = a % b;
@@ -91,7 +93,7 @@ namespace Header
             return a;
         }
 
-        private static BigInteger Create_E(BigInteger mod,BigInteger euler)
+        private static BigInteger Create_E(BigInteger mod, BigInteger euler)
         {
             BigInteger e, tmp;
             int eul = (int)euler;
@@ -131,7 +133,7 @@ namespace Header
             BigInteger result = 1;
             BigInteger x = value % n;
 
-            for (i=1; i <= b; i <<= 1)
+            for (i = 1; i <= b; i <<= 1)
             {
                 x %= n;
                 if ((b & i) != 0)
@@ -142,19 +144,7 @@ namespace Header
                 x *= x;
             }
             return result;
-           
-        }
 
-        public static byte[] Encrypt(byte[] data)
-        {
-            BigInteger NumericData = new BigInteger(data);
-            return PowModulo(NumericData, publicKey.e, publicKey.n).ToByteArray();
-        }
-
-        public static byte[] Decrypt(byte[] data)
-        {
-            BigInteger NumericData = new BigInteger(data);
-            return PowModulo(NumericData, privateKey.e, privateKey.n).ToByteArray();
         }
 
         public static byte[] EncryptData(byte[] data)
@@ -164,51 +154,63 @@ namespace Header
             BigInteger DataToEncrypt;
             int DataLen = publicKey.n.ToByteArray().Length - 1;
             int KeyLen = publicKey.n.ToByteArray().Length;
+
+
             foreach (byte DataByte in data)
             {
                 DataSample.Add(DataByte);
                 if (DataSample.Count == DataLen)
                 {
+                    DataSample.Add(0);//czytam jako dodatnie
                     DataToEncrypt = new BigInteger(DataSample.ToArray());
-                    byte[] encrypted = PowModulo(DataToEncrypt, publicKey.e, publicKey.n).ToByteArray();
+
+                    byte[] encrypted = BigInteger.ModPow(DataToEncrypt, publicKey.e, publicKey.n).ToByteArray();
                     Array.Resize<byte>(ref encrypted, KeyLen);
                     result.AddRange(encrypted);
                     DataSample.Clear();
                 }
             }
 
-            if (DataSample.Any())
+            if (DataSample.Count > 0)
             {
                 DataToEncrypt = new BigInteger(DataSample.ToArray());
-                byte[] encrypted = PowModulo(DataToEncrypt, publicKey.e, publicKey.n).ToByteArray();
+                byte[] encrypted = BigInteger.ModPow(DataToEncrypt, publicKey.e, publicKey.n).ToByteArray();
                 Array.Resize<byte>(ref encrypted, KeyLen);
                 result.AddRange(encrypted);
                 DataSample.Clear();
             }
 
 
-            
+
             Console.WriteLine("Po zaszyfrowaniu bajty: " + result.ToArray().Length);
             return result.ToArray();
         }
-        
+
+
+
         public static byte[] DecryptData(byte[] data)
         {
             List<byte> result = new List<byte>();
             List<byte> DataSample = new List<byte>();
             BigInteger DataToEncrypt;
-            int DataLen =privateKey.n.ToByteArray().Length - 1;
+            int DataLen = privateKey.n.ToByteArray().Length - 1;
             int KeyLen = privateKey.n.ToByteArray().Length;
+
             foreach (byte DataByte in data)
             {
+
                 DataSample.Add(DataByte);
                 if (DataSample.Count == KeyLen)
                 {
                     DataToEncrypt = new BigInteger(DataSample.ToArray());
-                    byte[] encrypted = PowModulo(DataToEncrypt, privateKey.e, privateKey.n).ToByteArray();
-                    Array.Resize<byte>(ref encrypted, DataLen);
-                    result.AddRange(encrypted);
+
+                    byte[] decrypted = BigInteger.ModPow(DataToEncrypt, privateKey.e, privateKey.n).ToByteArray();
+
+                    Array.Resize<byte>(ref decrypted, DataLen);
+                    result.AddRange(decrypted);
                     DataSample.Clear();
+
+
                 }
             }
 
@@ -216,55 +218,36 @@ namespace Header
             return result.ToArray();
         }
 
-       public static bool Comparer(byte[] enc, byte[] dec)
+
+        public static void EncryptTest(byte[] data)
         {
-            if (enc.Length > dec.Length)
-                return false;
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            var enc1=EncryptData(data);
+            sw.Stop();
+            Console.WriteLine("Czas naszego algorytmu przy enkrypcji:" + sw.Elapsed);
+            RSACryptoServiceProvider RSA = new RSACryptoServiceProvider();
+            sw.Reset();
+            sw.Start();
+            var enc2 =RSA.Encrypt(data, false);
+            sw.Stop();
+            Console.WriteLine("Czas wbudowanego algorytmu przy enkrypcji:" + sw.Elapsed);
+            sw.Reset();
+            sw.Start();
+            EncryptData(enc1);
+            sw.Stop();
+            Console.WriteLine("Czas naszego algorytmu przy enkrypcji:" + sw.Elapsed);
+            sw.Reset();
+            sw.Start();
+             RSA.Decrypt(enc2, false);
+            sw.Stop();
+            Console.WriteLine("Czas wbudowanego algorytmu przy dekrypcji:" + sw.Elapsed);
 
-            for (int i = 0; i < enc.Length; ++i)
-                if (enc[i] != dec[i])
-                    return false;
+        }   
 
-            for (int i = enc.Length; i < dec.Length; ++i)
-                if (dec[i] != 0)
-                    return false;
 
-            return true;
-        }
-
-        public static void RSA_TEST()
-        {
-            Random rng = new Random();
-            int filed = 0;
-            var length = HeaderReader.data.Length;
-            
-            for (int i=0; i <10; i++)
-            {
-                byte[] data = new byte[length];
-                rng.NextBytes(data);
-                var enc = EncryptData(data);
-                var dec = DecryptData(enc);
-
-                if (Comparer(enc,dec))
-                {
-                    Console.WriteLine();
-                    Console.WriteLine("Błąd dla i : " + i);
-                    
-                    
-                    ++filed;
-                }
-                else if (i % 100 == 0)
-                    Console.WriteLine("| Jesteśmy na i: " + i + " Oblane: " + filed);
-            }
-            Console.WriteLine("Oblane: " + filed);
-        }
-        
 
     }
-
-    
-
-   
 
 
     public struct Key

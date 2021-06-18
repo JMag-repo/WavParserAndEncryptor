@@ -19,7 +19,7 @@ namespace Emedia_zad1.Chunks
         INFOsubChunk ICMT;  //komentarze
         INFOsubChunk ITRK;  //komentarze
         INFOsubChunk ISFT;  //oprogramowanie
-        byte[] nierozpoznane;
+        
 
         public void RecognizeChunk(char[] type,uint len,byte[] data)
         {

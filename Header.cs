@@ -10,7 +10,7 @@ using  Emedia_zad1.Chunks;
 
 namespace Header
 {
-    class HeaderReader
+    public class HeaderReader
     {   
         
         
@@ -33,6 +33,7 @@ namespace Header
         }
 
         public static INFOChunk infochunk;
+        public static CUEChunk CUE;
         public static WAV wav;
         public static byte[] data { get; set; }
 
@@ -94,148 +95,18 @@ namespace Header
             return result;
         }
 
-        public static bool FIND_INFO1(string path)
+        public static double[] Phase(Complex[] samples)
         {
-            FileStream fs = new FileStream(path, FileMode.Open);
-            BinaryReader br = new BinaryReader(fs);
-            //br.ReadBytes(44); //pominięcie nagłówka
-            byte tmp;   //zmienna pomocnicza
-            byte[] chunkName = new byte[4];
-            byte[] chunk;
-            string output, info;
-            for (int i = 45; i < fs.Length; i++)
+            int N = samples.Length;
+            double[] result = new double[N];
+            for (int i = 0; i < N; i++)
             {
-                tmp = br.ReadByte();
-                output = tmp.ToString("X2");
-                if (output == "4C")
-                {
-                    chunkName[0] = tmp;
-                    info = output;
-                    for (int j = 0; j < 3; j++) //wczytywanie danych po 4 (po 4 liczby na próbkę)
-                    {
-                        tmp = br.ReadByte();
-                        chunkName[j + 1] = tmp;
-                        output = tmp.ToString("X2");
-                        info += output;
-                    }
-                    if (info == "4C495354") //napis LIST zakodowany w ASCII
-                    {
-                        Console.WriteLine("jest inf0");
-                        Console.WriteLine(ASCIIEncoding.ASCII.GetString(chunkName));
-                        Int32 chunkSize = br.ReadInt32();   //rozmiar chunku LIST
-                        chunk = new byte[chunkSize];
-                        Console.WriteLine("Size: " + chunkSize);
-                        for (int j = 0; j < chunkSize; j++) //wczytywanie danych po 4 (po 4 liczby na próbkę)
-                        {
-                            tmp = br.ReadByte();
-                            chunk[j] = tmp;
-                        }
-                        i += chunkSize + 4;
-                        Console.WriteLine(ASCIIEncoding.ASCII.GetString(chunk));
-                    }
-                    i += 3;
-                }
-                if (output == "69")
-                {
-                    chunkName[0] = tmp;
-                    info = output;
-                    for (int j = 0; j < 3; j++)
-                    {
-                        tmp = br.ReadByte();
-                        chunkName[j + 1] = tmp;
-                        output = tmp.ToString("X2");
-                        info += output;
-                    }
-                    i += 3;
-
-                    if (info == "69584D4C") //napis aXML zakodowany w ASCII
-                    {
-                        Console.WriteLine("jest xml");
-                        Console.WriteLine(ASCIIEncoding.ASCII.GetString(chunkName));
-                        Int32 chunkSize = br.ReadInt32();   //rozmiar chunku LIST
-                        chunk = new byte[chunkSize];
-                        Console.WriteLine("Size: " + chunkSize);
-                        for (int j = 0; j < chunkSize; j++) //wczytywanie danych po 4 (po 4 liczby na próbkę)
-                        {
-                            tmp = br.ReadByte();
-                            chunk[j] = tmp;
-                        }
-                        i += chunkSize + 4;
-                        Console.WriteLine(ASCIIEncoding.ASCII.GetString(chunk));
-                        Console.WriteLine("iXML");
-                    }
-                }
-
-
-                if (output == "61")
-                {
-                    chunkName[0] = tmp;
-                    info = output;
-                    for (int j = 0; j < 3; j++)
-                    {
-                        tmp = br.ReadByte();
-                        chunkName[j + 1] = tmp;
-                        output = tmp.ToString("X2");
-                        info += output;
-                    }
-                    i += 3;
-
-                    if (info == "61584D4C") //napis iXML zakodowany w ASCII
-                    {
-                        Console.WriteLine("jest xml");
-                        Console.WriteLine(ASCIIEncoding.ASCII.GetString(chunkName));
-                        Int32 chunkSize = br.ReadInt32();   //rozmiar chunku LIST
-                        chunk = new byte[chunkSize];
-                        Console.WriteLine("Size: " + chunkSize);
-                        for (int j = 0; j < chunkSize; j++) //wczytywanie danych po 4 (po 4 liczby na próbkę)
-                        {
-                            tmp = br.ReadByte();
-                            chunk[j] = tmp;
-                        }
-                        i += chunkSize + 4;
-                        Console.WriteLine(ASCIIEncoding.ASCII.GetString(chunk));
-                    }
-                }
-
-
-                if (output == "5F")
-                {
-                    chunkName[0] = tmp;
-                    info = output;
-                    for (int j = 0; j < 3; j++)
-                    {
-                        tmp = br.ReadByte();
-                        chunkName[j + 1] = tmp;
-                        output = tmp.ToString("X2");
-                        info += output;
-                    }
-                    i += 3;
-
-                    if (info == "5F504D58") //napis _PMX zakodowany w ASCII
-                    {
-                        Console.WriteLine("jest xml");
-                        Console.WriteLine(ASCIIEncoding.ASCII.GetString(chunkName));
-                        Int32 chunkSize = br.ReadInt32();   //rozmiar chunku LIST
-                        chunk = new byte[chunkSize];
-                        Console.WriteLine("Size: " + chunkSize);
-                        for (int j = 0; j < chunkSize; j++) //wczytywanie danych po 4 (po 4 liczby na próbkę)
-                        {
-                            tmp = br.ReadByte();
-                            chunk[j] = tmp;
-                        }
-                        i += chunkSize + 4;
-                        Console.WriteLine(ASCIIEncoding.ASCII.GetString(chunk));
-                    }
-                }
-
-
+                result[i] = Math.Atan(samples[i].Imaginary / samples[i].Real);
             }
-            Console.WriteLine("kuniec");
-            fs.Close();
-            br.Close();
-            return true;
+            return result;
         }
-    
+
+        
 
         public static void FIND_INFO(string path)
         {
@@ -246,12 +117,10 @@ namespace Header
             uint len;
             char[] type;
             uint loop;
-            //fs.Position=44;
-            // StreamWriter outputFile = new StreamWriter(Path.Combine("chunki.txt"));
-            while (true)
+            
+            while (fs.Position < fs.Length)
             {
                 byte[] id = br.ReadBytes(4);
-
                 
 
 
@@ -271,12 +140,21 @@ namespace Header
                         infochunk.RecognizeChunk(type, len, dta);
                         i += 3 + (int)len + 4;
                     }
-                    break;
-                    
-                    
-                    
+                    infochunk.ShowInfoChunk();
+                   
+                }
+                if (System.Text.Encoding.UTF8.GetString(id) == "cue ")
+                {
+                    Console.WriteLine("znaleziono cue");
+                    type = System.Text.Encoding.UTF8.GetString(id).ToCharArray();
+                    len = br.ReadUInt32();
+                    int numPoints = br.ReadInt32();
+                    dta = br.ReadBytes((int)len-4);
+                    CUE = new CUEChunk(type, len, dta, numPoints);
+                    CUE.ShowData();
                     
                 }
+                
             }
             
             fs.Close();
@@ -284,33 +162,94 @@ namespace Header
             
         }
 
-        public static void GetChunks(string path)
-        {
-            FileStream fs = new FileStream(path, FileMode.Open);
-            BinaryReader br = new BinaryReader(fs);
-            br.ReadBytes(44);
-            byte[] tmp;
-            string info;
-            for (int i = 45; i < fs.Length; i++)
-            {
-                tmp=br.ReadBytes(4);
-            }
-        }
+       
 
         public static void GetData(string path)
         {
             FileStream fs = new FileStream(path, FileMode.Open);
             BinaryReader br = new BinaryReader(fs);
-            HeaderReader.data = br.ReadBytes(Convert.ToInt32(fs.Length) - 44);
+            br.ReadBytes(44);
+            HeaderReader.data = br.ReadBytes(Convert.ToInt32(fs.Length)-44);
             br.Close();
             fs.Close();
 
+        }
+
+       public static void SaveWithoutMetaData(string path, string Filename)
+        {
+            FileStream f = new FileStream(Filename, FileMode.Create);
+            FileStream fs = new FileStream(path, FileMode.Open);
+            BinaryReader br = new BinaryReader(fs);
+            BinaryWriter bw = new BinaryWriter(f);
+            br.ReadBytes(44);
+            //wpisanie nagłówka
+            bw.Write(new char[4] { 'R', 'I', 'F', 'F' });
+            bw.Write((int)HeaderReader.wav.ChunkSize);
+            bw.Write(new char[4] { 'W', 'A', 'V', 'E' });
+            bw.Write(new char[4] { 'f', 'm', 't', ' ' });
+            bw.Write((int)HeaderReader.wav.Subchunk1_size);
+            bw.Write((short)HeaderReader.wav.AudioFormat);
+            bw.Write((short)HeaderReader.wav.NumberOfChannels);
+            bw.Write((int)HeaderReader.wav.SampleRate);
+            bw.Write((int)HeaderReader.wav.ByteRate);
+            bw.Write((short)HeaderReader.wav.BlockAlign);
+            bw.Write((short)HeaderReader.wav.BitsPerSample);
+            bw.Write(new char[4] { 'd', 'a', 't', 'a' });
+            bw.Write((int)HeaderReader.wav.Subchunk2_size);
+            byte[] dta;
+            uint len;
+            char[] type;
+            uint loop;
+
+            while (fs.Position < fs.Length)
+            {
+                byte[] id = br.ReadBytes(4);
+
+
+                if (System.Text.Encoding.UTF8.GetString(id) == "LIST")
+                {
+
+                    type = System.Text.Encoding.UTF8.GetString(id).ToCharArray();
+                    len = br.ReadUInt32();
+                    dta = br.ReadBytes(4);
+                    infochunk = new INFOChunk(type, len, dta);
+                    loop = len;
+                    for (int i = 0; i <= (int)loop; i++)
+                    {
+                        type = br.ReadChars(4);
+                        len = br.ReadUInt32();
+                        dta = br.ReadBytes((int)len);
+                        infochunk.RecognizeChunk(type, len, dta);
+                        i += 3 + (int)len + 4;
+                    }
+
+
+                }
+                if (System.Text.Encoding.UTF8.GetString(id) == "cue ")
+                {
+                    
+                    type = System.Text.Encoding.UTF8.GetString(id).ToCharArray();
+                    len = br.ReadUInt32();
+                    int numPoints = br.ReadInt32();
+                    dta = br.ReadBytes((int)len - 4);
+                    
+
+                }
+                else
+                    bw.Write(id);
+
+            }
+            f.Close();
+            bw.Close();
+            br.Close();
+            fs.Close();
         }
 
         public static void ReadWAV(string path)//odczytywanie pliku
         {
             Complex[] samples = new Complex[2000];//sample
             double[] magnitude = new double[2000];
+            double[] phase = new double[2000];
             FileStream fs = new FileStream(path, FileMode.Open);
             BinaryReader br = new BinaryReader(fs);
             wav.RIFF = new string(br.ReadChars(4));
@@ -326,13 +265,15 @@ namespace Header
             wav.BitsPerSample = br.ReadInt16();
             wav.data = new string(br.ReadChars(4));
             wav.Subchunk2_size = br.ReadInt32();
-
-
-            if(wav.NumberOfChannels == 2)
+            var nSamples = ((long)wav.Subchunk2_size) / (long)(wav.NumberOfChannels * 8) / (long)(wav.BitsPerSample);//ilość sampli na kanał
+            
+            
+            if (wav.NumberOfChannels == 2 && wav.BitsPerSample == 16)
             {
                 for (int i = 0; i < samples.Length; i++)
                 {
                     samples[i] = br.ReadInt16();
+                    br.ReadInt16(); // pominięcie drugiego kanału
                 }
             }
            
@@ -343,7 +284,7 @@ namespace Header
 
             using (StreamWriter outputFile = new StreamWriter(Path.Combine("samples.dat")))
             {
-                for (int i=0; i< samples.Length;i++)
+                for (int i=0; i< samples.Length/2;i++)
                 {
                     outputFile.WriteLine(samples[i].Real + ";" + samples[i].Imaginary);
                 }
@@ -351,10 +292,11 @@ namespace Header
 
             samples = DFT_transform(samples);
             magnitude = Magnitude(samples);
+            phase = Phase(samples);
 
             using (StreamWriter outputFile = new StreamWriter(Path.Combine("DFT.dat")))
             {
-                for (int i = 0; i < samples.Length; i++)
+                for (int i = 0; i < samples.Length/2; i++)
                 {
                     outputFile.WriteLine(i+ "\t" + samples[i].Real + "\t" + samples[i].Imaginary);
                 }
@@ -362,9 +304,18 @@ namespace Header
 
             using (StreamWriter outputFile = new StreamWriter(Path.Combine("Magnitude.dat")))
             {
-                for (int i = 0; i < magnitude.Length; i++)
+                for (int i = 0; i < magnitude.Length/2; i++)
                 {
                     outputFile.WriteLine(i + "\t" + magnitude[i]);
+
+                }
+            }
+
+            using (StreamWriter outputFile = new StreamWriter(Path.Combine("Phase.dat")))
+            {
+                for (int i = 0; i < phase.Length/2; i++)
+                {
+                    outputFile.WriteLine(i + "\t" + phase[i]);
 
                 }
             }
